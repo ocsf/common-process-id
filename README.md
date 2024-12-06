@@ -23,6 +23,20 @@ The written specification for CPID construction and statement of design goals is
 
 ## Reference Implementation
 
-This repository contains a native reference implementation that can be used directly as a library or as a command line program for asserting the correctness of custom implementations.
+This repository contains a native C reference implementation that can be used directly as a library or as a command line program for asserting the correctness of custom implementations.
 
-TODO: add reference implementation
+Compile:
+```
+mkdir build && cd build
+cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON ..
+make
+ctest
+```
+
+Set `-DBUILD_TESTING=OFF` to disable testing.
+
+CLI Use:
+```
+./cpid_cli <PID>
+```
+
