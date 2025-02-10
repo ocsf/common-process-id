@@ -2,7 +2,9 @@
 # This .gitignore file was automatically created by Microsoft(R) Visual Studio.
 ################################################################################
 
-/.vs/ProjectSettings.json
-/.vs/common-process-id/v17
-/.vs/VSWorkspaceState.json
+/.vs
 /.gitignore
+/csharp/CPID/obj
+/csharp/Example/obj
+/CSharp_/CPID/obj
+/CSharp_/Example/obj

@@ -1,4 +1,5 @@
-﻿using System.Buffers.Binary;
+﻿// SPDX-License-Identifier: Apache-2.0
+using System.Buffers.Binary;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;

@@ -1,5 +1,7 @@
 #pragma once
 
+// SPDX-License-Identifier: Apache-2.0
+
 #include <guiddef.h>
 #include <cstdint>
 #include <string>
