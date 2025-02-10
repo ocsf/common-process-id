@@ -1,0 +1,10 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/.vs
+/.gitignore
+/csharp/CPID/obj
+/csharp/Example/obj
+/CSharp_/CPID/obj
+/CSharp_/Example/obj
