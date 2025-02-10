@@ -16,18 +16,6 @@
 
 #pragma comment(lib, "Bcrypt.lib")
 
-#pragma pack(push, 1)
-struct digest_input_content_t
-{
-	GUID     machine_guid;
-	uint64_t system_creation_time_windows_ticks;
-	uint64_t process_creation_time_windows_ticks;
-	uint64_t pid;
-};
-#pragma pack(pop)
-
-static_assert(40 == sizeof(digest_input_content_t), "Windows digest_input_content_t size should be 40 bytes");
-
 
 //---------------------------------------------------------------------------------------------------------------------
 // 
@@ -65,7 +53,7 @@ void*    Cpid::s_bcrypt = nullptr;
 //---------------------------------------------------------------------------------------------------------------------
 bool Cpid::Startup()
 {
-	if (!GetMachineId(&s_machineGuid))
+	if (!GetMachineGuid(&s_machineGuid))
 	{
 		return false; // failed to get the MachineGuid
 	}
@@ -164,8 +152,7 @@ int Cpid::Compare(const cpid_t& cpidA, const cpid_t& cpidB) noexcept
 // 
 //	Computes the SHA256 hash of the specified input per CPID specification.
 // 
-//	Params	: input  [in]  pointer to the input data
-//			  length [in]  the length of the input
+//	Params	: input  [in]  pointer to a digest_input_content_t that is to be hashed
 //			  digest [out] pointer to a buffer that receives the 32 bytes of the sha256 digest 
 // 
 //	Returns	: true when the SHA256 digest was successfully computed; false otherwise.
@@ -173,7 +160,7 @@ int Cpid::Compare(const cpid_t& cpidA, const cpid_t& cpidB) noexcept
 //	See also: https://github.com/ocsf/common-process-id/blob/main/specification.md
 // 
 //---------------------------------------------------------------------------------------------------------------------
-bool Cpid::ComputeSha256Hash(const void* input, uint32_t length, uint8_t digest[32])
+bool Cpid::ComputeSha256Hash(const digest_input_content_t* input, uint8_t digest[32])
 {
 	if (s_bcrypt == nullptr)
 	{
@@ -207,7 +194,7 @@ bool Cpid::ComputeSha256Hash(const void* input, uint32_t length, uint8_t digest[
 
 			if (BCRYPT_SUCCESS(status))
 			{
-				status = BCryptHashData(hHash, (PUCHAR)input, (ULONG)length, 0);
+				status = BCryptHashData(hHash, (PUCHAR)input, sizeof(digest_input_content_t), 0);
 
 				if (BCRYPT_SUCCESS(status))
 				{
@@ -284,7 +271,7 @@ bool Cpid::Derive2(
 	input.pid                                 = processId;
 
 	uint8_t digest[32];
-	if (!Cpid::ComputeSha256Hash(&input, sizeof(input), digest))
+	if (!Cpid::ComputeSha256Hash(&input, digest))
 	{
 		return false; // failed
 	}
@@ -519,7 +506,7 @@ bool Cpid::TryParse(const std::string& str, cpid_t* cpid)
 //---------------------------------------------------------------------------------------------------------------------
 bool Cpid::SelfTest()
 {
-	const GUID machineId = { 0xb3b44fe1, 0x8a3b, 0x4191, { 0xa9, 0x1e, 0xd3, 0x58, 0x1e, 0x76, 0x6f, 0xac } };
+	const GUID machineGuid = { 0xb3b44fe1, 0x8a3b, 0x4191, { 0xa9, 0x1e, 0xd3, 0x58, 0x1e, 0x76, 0x6f, 0xac } };
 	const uint64_t systemCreationTime  = 133494576686106382;
 	const uint64_t processCreationTime = 133494576996587731;
 	const uint64_t processId = 4992;
@@ -527,7 +514,7 @@ bool Cpid::SelfTest()
 	const cpid_t expected = { 0xec88c71a, 0x1d67, 0x853c, { 0xa7, 0x6c, 0x3f, 0x10, 0xf2, 0xac, 0xdb, 0x6e } };
 
 	cpid_t cpid;
-	if (!Derive2(machineId, systemCreationTime, processCreationTime, processId, &cpid))
+	if (!Derive2(machineGuid, systemCreationTime, processCreationTime, processId, &cpid))
 	{
 		return false; // failed to derive the CPID value
 	}
@@ -540,12 +527,12 @@ bool Cpid::SelfTest()
 // 
 //	GetMachineId
 // 
-//	Params	: machineId [out] receives the MachineGuid of the current Windows computer.
+//	Params	: machineGuid [out] receives the MachineGuid of the current Windows computer.
 // 
 //	Returns	: true when successful; false otherwise.
 // 
 //---------------------------------------------------------------------------------------------------------------------
-bool Cpid::GetMachineId(GUID* machineId)
+bool Cpid::GetMachineGuid(GUID* machineGuid)
 {
 	char str[40];
 	DWORD size = sizeof(str);
@@ -570,10 +557,10 @@ bool Cpid::GetMachineId(GUID* machineId)
 		return false; // failed to parse the string as a cpid_t or GUID
 	}
 
-	machineId->Data1 = cpid.Data1;
-	machineId->Data2 = cpid.Data2;
-	machineId->Data3 = cpid.Data3;
-	std::memcpy(&machineId->Data4, cpid.Data4, sizeof(machineId->Data4));
+	machineGuid->Data1 = cpid.Data1;
+	machineGuid->Data2 = cpid.Data2;
+	machineGuid->Data3 = cpid.Data3;
+	std::memcpy(&machineGuid->Data4, cpid.Data4, sizeof(machineGuid->Data4));
 
 	return true;
 }
