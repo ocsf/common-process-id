@@ -284,7 +284,7 @@ These values are combined in the following 40-byte layout to form the CPID diges
 ```
 |-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-|
 | linux boot uuid                     | 128-bit RFC 9562 binary |
-| process namespace id                | 64-bit unsigned integer |
+| pid namespace id                    | 64-bit unsigned integer |
 | process creation time jiffies/ticks | 64-bit unsigned integer |
 | namespace-specific tgid             | 64-bit integer          |
 |-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-|
@@ -299,9 +299,9 @@ These formats enable using the memory representation of the following C struct a
 #pragma pack(push, 1)
 typedef struct {
     uuid_t boot_uuid;                     //   16 bytes
-    uint64_t process_namespace_id;        //  + 8 bytes
+    uint64_t pid_namespace;               //  + 8 bytes
     uint64_t process_creation_time_ticks; //  + 8 bytes
-    int64_t namespace_tgid;               //  + 8 bytes
+    int64_t pid_namespace_tgid;           //  + 8 bytes
 } digest_input_content_t;                 // = 40 bytes
 #pragma pack(pop)
 
@@ -328,7 +328,7 @@ However, it is likely used to ask the operating system for the process-specific 
 ```
 |-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-|
 | linux boot uuid             | 2899dae4-4fa4-4eef-95b6-6bc95325f61a  |
-| process namespace id        | 4026532263                            |
+| pid namespace id            | 4026532263                            |
 | process creation time ticks | 55558                                 |
 | namespace-specific tgid     | 29                                    |
 |-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-|
