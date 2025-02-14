@@ -258,6 +258,7 @@ The TGID will be reference where applicable to avoid ambiguity.
 The above information is exposed by Linux kernel in [the `/proc` filesystem](https://docs.kernel.org/filesystems/proc.html).
 
 First, the PID namespace identifier for the PID namespace the process was created in is exposed in `/proc/<pid>/ns/pid` where `<pid>` is the process identifier in the PID namespace the filesystem is being accessed from.
+The PID namespace identifier is exposed as an inode number.
 The contents of this link are always the same no matter what PID namespace it is accessed from.
 However, elevated permissions are needed to read the link if the process in question is not owned by the querying user.
 
@@ -275,6 +276,9 @@ Uniquely identifying a boot gives the CPID protection against clock modification
 A wall clock PCT is created on Linux by adding the boot-relative PCT to the wall clock boot time given in `/proc/stat`.
 This wall clock boot time changes with administrative action performed on the system clock (e.g. `sudo date -s ...`).
 Therefore, the use of a monotonic PCT provides reliability for the CPID across the lifetime of a process.
+Note that PID namespace identifier and PCT are provided by Linux as an unsigned integers (`ino_t`, `unsigned long long` respectively), so 64-bit unsigned integers are used in the digest input definition.
+Additionally, TGID is provided by Linux as a signed integer (`pid_t`), so a 64-bit integer is used in the digest input definition.
+
 
 These values are combined in the following 40-byte layout to form the CPID digest input.
 ```
@@ -282,23 +286,23 @@ These values are combined in the following 40-byte layout to form the CPID diges
 | linux boot uuid                     | 128-bit RFC 9562 binary |
 | process namespace id                | 64-bit unsigned integer |
 | process creation time jiffies/ticks | 64-bit unsigned integer |
-| namespace-specific tgid             | 64-bit unsigned integer |
+| namespace-specific tgid             | 64-bit integer          |
 |-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-|
 ```
 
 The [RFC 9562 binary representation](https://datatracker.ietf.org/doc/html/rfc9562#name-uuid-format) is the binary UUID format natively supported on Linux and is implemented by `libuuid`.
-Additionally, the 64-bit integer representation is the platform-native memory representation for unsigned 64-bit integers on the platform that the hash input is constructed on.
+Additionally, the 64-bit integer representation is the platform-native memory representation for 64-bit integers on the platform that the hash input is constructed on.
 These formats enable using the memory representation of the following C struct as the digest input.
 ```C
 #include <uuid/uuid.h>
 
 #pragma pack(push, 1)
 typedef struct {
-    uuid_t boot_uuid;
-    uint64_t process_namespace_id;
-    uint64_t process_creation_time_ticks;
-    uint64_t namespace_tgid;
-} digest_input_content_t;
+    uuid_t boot_uuid;                     //   16 bytes
+    uint64_t process_namespace_id;        //  + 8 bytes
+    uint64_t process_creation_time_ticks; //  + 8 bytes
+    int64_t namespace_tgid;               //  + 8 bytes
+} digest_input_content_t;                 // = 40 bytes
 #pragma pack(pop)
 
 _Static_assert(40 == sizeof(digest_input_content_t), "Linux digest_input_content_t size should be 40 bytes.");
@@ -357,9 +361,10 @@ Windows does not provide a boot-referenced PCT based on a monotonic clock.
 Process start times are received as a Windows FILETIME which is a 64-bit value representing the number of 100-nanosecond intervals since January 1, 1601 (UTC) (Windows ticks).
 This still serves the CPID use case well with the caveat that a system clock change can cause new processes to be created with PCTs that were previously encountered.
 
+
+Note that PID and PCT are provided by Windows as unsigned integers (`DWORD`, `FILETIME`/`ULARGE_INTEGER` respectively), so unsigned 64-bit integers are used in the digest input definition.
 [Windows documentation on FILETIME](https://learn.microsoft.com/en-us/windows/win32/api/minwinbase/ns-minwinbase-filetime#remarks) does not recommend performing arithmetic on a FILETIME or casting it to another interpretation.
-Therefore, FILETIME values are converted to a straightforward 64-bit integer representation of the PCT in Windows ticks before the digest calculation.
-The Windows reference implementation shows this conversion in detail.
+Therefore, FILETIME values are converted to a straightforward 64-bit integer unsigned representation of the PCT in Windows ticks before the digest calculation.
 
 All the above information is easily retrievable through the Windows `RegGetValue` and `GetProcessTime` APIs.
 
@@ -374,7 +379,7 @@ These values are combined together in the following 40-byte layout to form the d
 ```
 
 The [Windows GUID binary representation](https://learn.microsoft.com/en-us/windows/win32/api/guiddef/ns-guiddef-guid) is the binary UUID format natively supported on Windows.
-Additionally, the 64-bit integer representation is the platform-native memory representation for unsigned 64-bit integers on the platform that the hash input is constructed on.
+Additionally, the 64-bit unsigned integer representation is the platform-native memory representation for unsigned 64-bit integers on the platform that the hash input is constructed on.
 
 These formats enable using the memory representation of the following C struct as the digest input.
 
@@ -383,11 +388,11 @@ These formats enable using the memory representation of the following C struct a
 
 #pragma pack(push, 1)
 typedef struct {
-    GUID machine_guid;
-    uint64_t system_creation_time_windows_ticks;
-    uint64_t process_creation_time_windows_ticks;
-    uint64_t pid;
-} digest_input_content_t;
+    GUID machine_guid;                            //   16 bytes
+    uint64_t system_creation_time_windows_ticks;  //  + 8 bytes
+    uint64_t process_creation_time_windows_ticks; //  + 8 bytes
+    uint64_t pid;                                 //  + 8 bytes
+} digest_input_content_t;                         // = 40 bytes
 #pragma pack(pop)
 
 _Static_assert(40 == sizeof(digest_input_content_t), "Windows digest_input_content_t size should be 40 bytes");
@@ -452,28 +457,29 @@ While these processes are created immediately after boot, their creation times a
 The reference implementation sources PCT values from `sysctl`.
 
 MacOS does not provide PCTs based on a boot-relative monotonic clock.
-PCTs are received from MacOS as Unix timestamps with 64 bits for Unix epoch seconds and 32 bits for a microsecond offset.
 This still serves the CPID use case well with the caveat that a system clock change can cause new processes to be created with PCTs that were previously encountered.
 
 Finally, a process is identified within a boot by its PCT and PID.
+
+Note that PID and PCT are provided by MacOS as signed integers (`pid_t`, `time_t` respectively), so signed 64-bit integers are used in the digest input definition.
 
 These values are combined in the following 88-byte layout to form the digest input.
 ```
 |-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-|
 | macos serial number                                     | 16 byte ascii string with unused terminating bytes set to `\0`  |
 | macos hardware identifier                               | 128-bit rfc 9562 binary                                         |
-| kernel_task (PID 0) process creation time seconds       | 64-bit unsigned integer                                         |
-| kernel_task (PID 0) process creation time mircos offset | 64-bit unsigned integer                                         |
-| launchd (PID 1) process creation time seconds           | 64-bit unsigned integer                                         |
-| launchd (PID 1) process creation time mircos offset     | 64-bit unsigned integer                                         |
-| process creation time seconds                           | 64-bit unsigned integer                                         |
-| process creation time mircos offset                     | 64-bit unsigned integer                                         |
-| process identifier                                      | 64-bit unsigned integer                                         |
+| kernel_task (PID 0) process creation time seconds       | 64-bit integer                                                  |
+| kernel_task (PID 0) process creation time mircos offset | 64-bit integer                                                  |
+| launchd (PID 1) process creation time seconds           | 64-bit integer                                                  |
+| launchd (PID 1) process creation time mircos offset     | 64-bit integer                                                  |
+| process creation time seconds                           | 64-bit integer                                                  |
+| process creation time mircos offset                     | 64-bit integer                                                  |
+| process identifier                                      | 64-bit integer                                                  |
 |-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-|
 ```
 
 The [RFC 9562 binary representation](https://www.ietf.org/archive/id/draft-ietf-uuidrev-rfc4122bis-14.html#name-uuid-format) is the binary UUID format natively supported on MacOS, implemented by `libuuid`.
-Additionally, the 64-bit integer representation is the platform-native memory representation for unsigned 64-bit integers on the platform that the hash input is constructed on.
+Additionally, the 64-bit integer representation is the platform-native memory representation for 64-bit integers on the platform that the hash input is constructed on.
 A constant 16-byte buffer is used for the MacOS Serial Number in order to enable easier memory allocation of a digest input structure.
 
 These formats enable using the memory representation of the following C struct as the digest input.
@@ -481,20 +487,22 @@ These formats enable using the memory representation of the following C struct a
 ```C
 #include <uuid/uuid.h>
 
+#define MACOS_SERIAL_NUMBER_BUFFER_SIZE 16
+
 #pragma pack(push, 1)
 typedef struct {
-    uint64_t unix_epoch_seconds;
-    uint64_t micros_offset;
-} process_creation_time_t;
+    int64_t unix_epoch_seconds; //    8 bytes
+    int64_t micros_offset;      // +  8 bytes
+} process_creation_time_t;      // = 16 bytes
 
 typedef struct {
-    char serial_number[16];
-    uuid_t hardware_uuid;
-    process_creation_time_t kernel_task_creation_time;
-    process_creation_time_t launchd_creation_time;
-    process_creation_time_t process_creation_time;
-    uint64_t pid;
-} digest_input_content_t;
+    char serial_number[MACOS_SERIAL_NUMBER_BUFFER_SIZE]; //   16 bytes
+    uuid_t hardware_uuid;                                // + 16 bytes
+    process_creation_time_t kernel_task_creation_time;   // + 16 bytes
+    process_creation_time_t launchd_creation_time;       // + 16 bytes
+    process_creation_time_t process_creation_time;       // + 16 bytes
+    int64_t pid;                                         // +  8 bytes
+} digest_input_content_t;                                // = 88 bytes
 #pragma pack(pop)
 
 _Static_assert(88 == sizeof(digest_input_content_t), "Windows digest_input_content_t size should be 88 bytes");

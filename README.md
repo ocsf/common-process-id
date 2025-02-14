@@ -19,10 +19,12 @@ With CPIDs, the incident responder only needs to join on an [RFC 9562](https://d
 
 ## Specification
 
-The written specification for CPID construction and statement of design goals is given in [specification.md](specification.md).
+The written specification for CPID construction and statement of design goals is given in [SPECIFICATION.md](SPECIFICATION.md).
 
-## Reference Implementation
+## Reference Implementations
 
-This repository contains a native reference implementation that can be used directly as a library or as a command line program for asserting the correctness of custom implementations.
+This repository contains reference implementations for the CPID specification.
+These implementations are given in directories named after their implementation language.
+Each implementation contains its own README.md file for how to use the implementation.
 
-TODO: add reference implementation
+These reference implementations can be used directly in security software or for asserting the correctness of custom implementations.
