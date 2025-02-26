@@ -19,7 +19,7 @@ With CPIDs, the incident responder only needs to join on an [RFC 9562](https://d
 
 ## Specification
 
-The written specification for CPID construction and statement of design goals is given in [SPECIFICATION.md](SPECIFICATION.md).
+The written specification for CPID construction and statement of design goals is given in [specification.md](specification.md).
 
 ## Reference Implementations
 
