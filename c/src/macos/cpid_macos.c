@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
+#include <ctype.h>
+#include <stdint.h>
+#include <sys/types.h>
+#include <string.h>
+#include <uuid/uuid.h>
 #include <IOKit/IOKitLib.h>
 #include <sys/sysctl.h>
 #include <openssl/evp.h>
 
-#include <ctype.h>
-#include <stdint.h>
-#include <sys/types.h>
-#include <uuid/uuid.h>
 
 #include "cpid/cpid_macos.h"
 
@@ -38,15 +39,15 @@ typedef struct {
 
 _Static_assert(MACOS_EXPECTED_DIGEST_INPUT_CONTENT_SIZE == sizeof(digest_input_content_t), "digest_input_content_t is not the expected size.");
 
-typedef struct cpid_struct {
+typedef struct {
     EVP_MD_CTX *digest_context;
     EVP_MD *sha256;
     uint8_t digest_destination_buffer[EVP_MAX_MD_SIZE];
     digest_input_content_t digest_input_content;
 } *cpid_handle_internal_t;
 
-_Static_assert(EVP_MAX_MD_SIZE >= SHA256_BUFFER_SIZE, "OpenSSL EVP_MAX_MD_SIZE must be larger that SHA256_BUFFER_SIZE.");
-_Static_assert(SHA256_BUFFER_SIZE >= sizeof(uuid_t), "SHA256_BUFFER_SIZE must be larger that uuid_t.");
+_Static_assert(EVP_MAX_MD_SIZE >= SHA256_BUFFER_SIZE, "OpenSSL EVP_MAX_MD_SIZE must be larger than SHA256_BUFFER_SIZE.");
+_Static_assert(SHA256_BUFFER_SIZE >= sizeof(uuid_t), "SHA256_BUFFER_SIZE must be larger than uuid_t.");
 
 static int cpid_get_serial_number(char *const serial_number, const size_t serial_number_size) {
     if(!serial_number) {

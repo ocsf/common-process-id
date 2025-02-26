@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <limits.h>
 
-#include "cpid/cpid_macos.h"
+#include "cpid/cpid_linux.h"
 
 int main(int argc, char *argv[]) {
     if (argc != 2) {
