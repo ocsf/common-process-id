@@ -99,7 +99,7 @@ void Cpid::Shutdown()
 		s_bcrypt = nullptr;
 	}
 
-	memset(&s_machineGuid, 0, sizeof(s_machineGuid));
+	std::memset(&s_machineGuid, 0, sizeof(s_machineGuid));
 
 	s_systemCreationTime = 0;
 
@@ -284,21 +284,7 @@ bool Cpid::Derive2(
 	digest[7] = (digest[7] & 0x0F) | (0x8 << 4);	// set the version (Version 8)
 	digest[8] = (digest[8] & 0x3F) | (0x80);		// set the variant
 
-	cpid->Data1 =
-		(static_cast<uint32_t>(digest[3]) << 24) |
-		(static_cast<uint32_t>(digest[2]) << 16) |
-		(static_cast<uint32_t>(digest[1]) <<  8) |
-		(static_cast<uint32_t>(digest[0]));
-
-	cpid->Data2 =
-		(static_cast<uint16_t>(digest[5]) << 8) |
-		(static_cast<uint16_t>(digest[4]));
-
-	cpid->Data3 =
-		(static_cast<uint16_t>(digest[7]) << 8) |
-		(static_cast<uint16_t>(digest[6]));
-
-	std::memcpy(cpid->Data4, &digest[8], sizeof(cpid->Data4));
+	std::memcpy(cpid, digest, sizeof(cpid_t));
 
 	return true;
 }
@@ -559,10 +545,7 @@ bool Cpid::GetMachineGuid(GUID* machineGuid)
 		return false; // failed to parse the string as a cpid_t or GUID
 	}
 
-	machineGuid->Data1 = cpid.Data1;
-	machineGuid->Data2 = cpid.Data2;
-	machineGuid->Data3 = cpid.Data3;
-	std::memcpy(&machineGuid->Data4, cpid.Data4, sizeof(machineGuid->Data4));
+	std::memcpy(machineGuid, &cpid, sizeof(GUID));
 
 	return true;
 }

@@ -53,7 +53,7 @@ namespace OCSF
                 throw new ArgumentException("Invalid array length", "bytes");
             }
 
-            _guid = new Guid(bytes);
+            _guid = MemoryMarshal.Read<Guid>(bytes);
         }
 
 
@@ -287,7 +287,12 @@ namespace OCSF
         /// <summary>
         /// Returns a 16-element byte array that contains the value of this instance.
         /// </summary>
-        public byte[] ToByteArray() => _guid.ToByteArray();
+        public byte[] ToByteArray()
+        {
+            var g = new byte[16];
+            MemoryMarshal.TryWrite(g, _guid);
+            return g;
+        }
 
 
         /// <summary>
