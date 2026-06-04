@@ -87,11 +87,11 @@ DWORD cpid_initialize(_Out_ HANDLE* const libraryHandle)
     }
 
     // Read the machine GUID in from the registry (the native registry for WOW64).
-    char value[37];
+    wchar_t value[37];
     DWORD valueSize = sizeof(value);
-    w32err = RegGetValueA(HKEY_LOCAL_MACHINE,
-                          "SOFTWARE\\Microsoft\\Cryptography",
-                          "MachineGuid",
+    w32err = RegGetValueW(HKEY_LOCAL_MACHINE,
+                          L"SOFTWARE\\Microsoft\\Cryptography",
+                          L"MachineGuid",
                           RRF_RT_REG_SZ | (isWow64 ? RRF_SUBKEY_WOW6464KEY : 0),
                           NULL,
                           value,
@@ -102,7 +102,7 @@ DWORD cpid_initialize(_Out_ HANDLE* const libraryHandle)
     }
 
     // Parse the machine GUID which is stored in RFC UUID format.
-    w32err = UuidFromStringA((RPC_CSTR)value, &libraryData->MachineGuid);
+    w32err = UuidFromStringW((RPC_WSTR)value, &libraryData->MachineGuid);
     if (ERROR_SUCCESS != w32err)
     {
         goto Exit;
